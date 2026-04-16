@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Deterioro - Nataly Garzón Caicedo</title>
+    <!-- Librerías para exportación y funciones matemáticas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        :root {
+            --primary: #8C4432; 
+            --secondary: #1F2937;
+            --bg-body: #F9FAFB;
+            --panel-bg: #FFFFFF;
+            --border-color: #E5E7EB;
+            --text-main: #111827;
+            --text-muted: #6B7280;
+            --header-bg: #FFFFFF;
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --success: #10B981;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg-body); color: var(--text-main); font-size: 13px; line-height: 1.5; }
+
+        /* --- HEADER INSTITUCIONAL (3 NIVELES) --- */
+        .inst-header { background: var(--header-bg); border-bottom: 1px solid #E0E0E0; width: 100%; }
+        
+        .header-top { 
+            padding: 8px 40px; 
+            font-size: 0.7rem; 
+            color: var(--text-muted); 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
+            display: flex; 
+            justify-content: space-between; 
+            border-bottom: 1px solid #F0F0F0; 
+        }
+
+        .header-mid { padding: 35px 40px; text-align: center; }
+        .header-mid h1 { font-size: 1.8rem; font-weight: 800; color: #111; margin-bottom: 8px; letter-spacing: -0.5px; }
+        .header-mid p { font-size: 0.95rem; color: var(--text-muted); max-width: 800px; margin: 0 auto; font-weight: 400; }
+
+        .header-bottom { 
+            padding: 10px 40px; 
+            font-size: 0.75rem; 
+            color: #9CA3AF; 
+            display: flex; 
+            justify-content: flex-end; 
+            gap: 20px; 
+            background: #FAFAFA; 
+        }
+        .header-bottom b { color: #4B5563; }
+
+        /* --- LAYOUT --- */
+        .main-grid { display: grid; grid-template-columns: 420px 1fr; gap: 24px; padding: 30px 40px; max-width: 1600px; margin: 0 auto; }
+
+        .panel { background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .panel-title { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid #F3F4F6; margin-bottom: 15px; padding-bottom: 8px; letter-spacing: 0.5px; }
+
+        /* --- CONTROLES --- */
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 5px; color: #4B5563; }
+        .input-row { display: flex; align-items: center; gap: 12px; }
+        input[type="range"] { flex-grow: 1; accent-color: var(--primary); }
+        .val-display { width: 45px; text-align: right; font-family: monospace; font-weight: bold; color: var(--primary); }
+        
+        .check-group { display: flex; gap: 20px; margin: 15px 0; }
+        .check-item { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; cursor: pointer; }
+
+        /* --- RESULTADOS --- */
+        .result-hero { text-align: center; padding: 20px; }
+        .id-number { font-size: 5rem; font-weight: 900; line-height: 1; margin: 10px 0; transition: color 0.3s; }
+        .status-pill { display: inline-block; padding: 6px 20px; border-radius: 20px; color: white; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; }
+
+        .analysis-box { background: #F9FAFB; border-left: 4px solid var(--primary); padding: 15px; font-size: 0.9rem; line-height: 1.6; color: #374151; }
+        
+        .reco-item { background: white; border: 1px solid var(--border-color); padding: 12px; border-radius: 6px; margin-bottom: 8px; display: flex; align-items: flex-start; gap: 10px; }
+        .reco-item::before { content: "•"; color: var(--primary); font-weight: bold; }
+
+        /* --- BOTONES --- */
+        .btn-action { padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: 700; text-transform: uppercase; width: 100%; transition: 0.2s; letter-spacing: 0.5px; margin-top: 10px; }
+        .btn-primary { background: var(--secondary); color: white; }
+        .btn-primary:hover { background: #111827; }
+        .btn-export { background: #059669; color: white; }
+        .btn-export:hover { background: #047857; }
+
+        @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <header class="inst-header">
+        <div class="header-top">
+            <span>Universidad Politécnica de Madrid (UPM)</span>
+            <span>Máster en Rehabilitación Arquitectónica</span>
+        </div>
+        <div class="header-mid">
+            <h1>Calculadora de Deterioro en Fábrica de Ladrillo</h1>
+            <p>Herramienta técnica de simulación paramétrica para el análisis de degradación matérica y diagnóstico estructural en edificación histórica y moderna.</p>
+        </div>
+        <div class="header-bottom">
+            <span>Autora: <b>Nataly Garzón Caicedo</b></span>
+            <span>Trabajo Fin de Máster – Evaluación de Patologías</span>
+        </div>
+    </header>
+    
+    <div class="main-grid">
+        <!-- BARRA LATERAL DE CONFIGURACIÓN -->
+        <aside>
+            <div class="panel">
+                <div class="panel-title">I. Condiciones Ambientales</div>
+                <div class="input-group">
+                    <label>Humedad Relativa Media (%)</label>
+                    <div class="input-row">
+                        <input type="range" id="in-hr" min="0" max="100" value="65">
+                        <span class="val-display" id="val-hr">65%</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Precipitación Anual (mm)</label>
+                    <div class="input-row">
+                        <input type="range" id="in-rain" min="0" max="2500" value="600">
+                        <span class="val-display" id="val-rain">600</span>
+                    </div>
+                </div>
+                <div class="check-group">
+                    <label class="check-item"><input type="checkbox" id="in-sea"> Entorno Marino</label>
+                    <label class="check-item"><input type="checkbox" id="in-freeze"> Ciclos Hielo/Deshielo</label>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">II. Inspección Visual (Grado 0-5)</div>
+                <div class="input-group">
+                    <label>Presencia de Sales/Eflorescencias</label>
+                    <div class="input-row">
+                        <input type="range" id="in-salt" min="0" max="5" value="1">
+                        <span class="val-display" id="val-salt">1</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Fisuración y Grietas</label>
+                    <div class="input-row">
+                        <input type="range" id="in-crack" min="0" max="5" value="0">
+                        <span class="val-display" id="val-crack">0</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Pérdida de Sección / Erosión</label>
+                    <div class="input-row">
+                        <input type="range" id="in-loss" min="0" max="5" value="0">
+                        <span class="val-display" id="val-loss">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-action btn-primary" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">Actualizar Análisis</button>
+            <button class="btn-action btn-export" onclick="exportToExcel()">Exportar Datos (.xlsx)</button>
+        </aside>
+
+        <!-- ÁREA PRINCIPAL DE RESULTADOS -->
+        <main>
+            <div class="panel result-hero">
+                <div class="panel-title">Índice Global de Deterioro (ID)</div>
+                <div id="id-number" class="id-number">0.00</div>
+                <div id="status-pill" class="status-pill">Estable</div>
+                <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.8rem;">
+                    Escala normalizada: 0.0 (Óptimo) a 1.0 (Colapso funcional)
+                </p>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Diagnóstico Técnico</div>
+                <div id="tech-analysis" class="analysis-box">
+                    Cargando parámetros de simulación...
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Recomendaciones de Intervención</div>
+                <div id="reco-list">
+                    <!-- Dinámico -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Lógica de cálculo y UI
+        const inputs = ['in-hr', 'in-rain', 'in-sea', 'in-freeze', 'in-salt', 'in-crack', 'in-loss'];
+
+        function init() {
+            inputs.forEach(id => {
+                document.getElementById(id).addEventListener('input', calculate);
+            });
+            calculate();
+        }
+
+        function calculate() {
+            // Obtención de valores
+            const hr = parseInt(document.getElementById('in-hr').value);
+            const rain = parseInt(document.getElementById('in-rain').value);
+            const sea = document.getElementById('in-sea').checked;
+            const freeze = document.getElementById('in-freeze').checked;
+            const salt = parseInt(document.getElementById('in-salt').value);
+            const crack = parseInt(document.getElementById('in-crack').value);
+            const loss = parseInt(document.getElementById('in-loss').value);
+
+            // Actualizar etiquetas
+            document.getElementById('val-hr').innerText = hr + "%";
+            document.getElementById('val-rain').innerText = rain;
+            document.getElementById('val-salt').innerText = salt;
+            document.getElementById('val-crack').innerText = crack;
+            document.getElementById('val-loss').innerText = loss;
+
+            // Motor de cálculo simplificado (Subíndices 0-1)
+            const Sh = (hr / 100 * 0.6) + (Math.min(rain / 2000, 1) * 0.4);
+            const Ss = (salt / 5 * 0.7) + (sea ? 0.3 : 0);
+            const Sf = (crack / 5 * 0.5) + (loss / 5 * 0.3) + (freeze ? 0.2 : 0);
+
+            // Índice Global (Ponderación 40% Humedad, 30% Sales, 30% Físico)
+            const idGlobal = (Sh * 0.4) + (Ss * 0.3) + (Sf * 0.3);
+
+            updateUI(idGlobal, Sh, Ss, Sf, {freeze, sea});
+        }
+
+        function updateUI(id, Sh, Ss, Sf, flags) {
+            const display = document.getElementById('id-number');
+            const pill = document.getElementById('status-pill');
+            const analysis = document.getElementById('tech-analysis');
+            const recoList = document.getElementById('reco-list');
+
+            display.innerText = id.toFixed(2);
+
+            // Colores y Estados
+            let color, label;
+            if (id < 0.3) { color = "var(--success)"; label = "Estado Óptimo"; }
+            else if (id < 0.5) { color = "var(--warning)"; label = "Deterioro Leve"; }
+            else if (id < 0.75) { color = "#EA580C"; label = "Deterioro Grave"; }
+            else { color = "var(--danger)"; label = "Urgencia Técnica"; }
+
+            display.style.color = color;
+            pill.style.backgroundColor = color;
+            pill.innerText = label;
+
+            // Diagnóstico
+            let diag = `El sistema presenta un índice de <strong>${id.toFixed(2)}</strong>. `;
+            if (Sh > 0.6) diag += "Se detecta una saturación hídrica crítica que favorece la degradación capilar. ";
+            if (flags.freeze && Sh > 0.5) diag += "<strong>Alerta:</strong> Riesgo elevado de gelifracción por combinación de humedad y bajas temperaturas. ";
+            if (Ss > 0.5) diag += "La actividad salina está comprometiendo la cohesión superficial del material cerámico.";
+            analysis.innerHTML = diag;
+
+            // Recomendaciones
+            const recos = [];
+            if (Sh > 0.4) recos.push("Implementar barreras químicas o drenajes perimetrales para control de humedad.");
+            if (Ss > 0.5) recos.push("Realizar limpieza mediante apósitos de pulpa de papel para la extracción de sales solubles.");
+            if (Sf > 0.3) recos.push("Consolidación de fisuras mediante inyección de lechadas de cal compatibles.");
+            if (id > 0.7) recos.push("Intervención de urgencia: Sustitución puntual de piezas desintegradas (restitución).");
+            
+            recoList.innerHTML = recos.length ? 
+                recos.map(r => `<div class="reco-item">${r}</div>`).join('') :
+                '<div class="reco-item">No se requieren acciones correctivas inmediatas. Mantener vigilancia anual.</div>';
+        }
+
+        async function exportToExcel() {
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet('Análisis TFM');
+            ws.addRow(['Calculadora de Deterioro - Nataly Garzón']);
+            ws.addRow(['ID Global', document.getElementById('id-number').innerText]);
+            ws.addRow(['Humedad Relativa', document.getElementById('in-hr').value + '%']);
+            ws.addRow(['Fecha Exportación', new Date().toLocaleDateString()]);
+            
+            const buffer = await wb.xlsx.writeBuffer();
+            saveAs(new Blob([buffer]), 'Análisis_Deterioro_Ladrillo.xlsx');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
