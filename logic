@@ -1,0 +1,151 @@
+/**
+ * SISTEMA DE CÁLCULO DE DETERIORO - TFM ARQUITECTURA UPM
+ * Lógica pura sin dependencias externas.
+ */
+
+const CONFIG = {
+    escenarios: [
+        { id: 'scen1', label: "Patrimonio Histórico (Humedad)", hr: 85, rain: 1100, sea: false, freeze: false, salt: 1, crack: 0, loss: 5 },
+        { id: 'scen2', label: "Edificio Costero (Sales)", hr: 72, rain: 550, sea: true, freeze: false, salt: 4, crack: 1, loss: 10 },
+        { id: 'scen3', label: "Zona de Montaña (Heladas)", hr: 45, rain: 800, sea: false, freeze: true, salt: 0, crack: 3, loss: 5 },
+        { id: 'scen4', label: "Fachada Urbana Moderna", hr: 55, rain: 600, sea: false, freeze: false, salt: 0, crack: 0, loss: 0 }
+    ],
+    ids_inputs: ['in-hr', 'in-rain', 'in-sea', 'in-freeze', 'in-crack', 'in-salt', 'in-loss', 'w-h', 'w-s', 'w-f']
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    initApp();
+});
+
+function initApp() {
+    renderScenarioButtons();
+    attachEventListeners();
+    runCalculation();
+}
+
+function renderScenarioButtons() {
+    const container = document.getElementById('scenario-list');
+    CONFIG.escenarios.forEach(scen => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-scen';
+        btn.innerText = scen.label;
+        btn.onclick = () => loadScenario(scen);
+        container.appendChild(btn);
+    });
+}
+
+function attachEventListeners() {
+    // Escucha cambios en todos los inputs
+    CONFIG.ids_inputs.forEach(id => {
+        document.getElementById(id).addEventListener('input', runCalculation);
+    });
+
+    // Toggle panel avanzado
+    document.getElementById('btn-advanced').onclick = () => {
+        const panel = document.getElementById('advanced-panel');
+        const badge = document.getElementById('mode-tag');
+        panel.classList.toggle('active');
+        badge.innerText = panel.classList.contains('active') ? "MODO AVANZADO" : "MODO ESTÁNDAR";
+        badge.style.background = panel.classList.contains('active') ? "#ea580c" : "#B35C44";
+    };
+}
+
+function loadScenario(scen) {
+    document.getElementById('in-hr').value = scen.hr;
+    document.getElementById('in-rain').value = scen.rain;
+    document.getElementById('in-sea').checked = scen.sea;
+    document.getElementById('in-freeze').checked = scen.freeze;
+    document.getElementById('in-salt').value = scen.salt;
+    document.getElementById('in-crack').value = scen.crack;
+    document.getElementById('in-loss').value = scen.loss;
+    runCalculation();
+}
+
+function runCalculation() {
+    // 1. Recolección de Datos
+    const data = {
+        hr: parseInt(document.getElementById('in-hr').value),
+        rain: parseInt(document.getElementById('in-rain').value),
+        sea: document.getElementById('in-sea').checked,
+        freeze: document.getElementById('in-freeze').checked,
+        crack: parseInt(document.getElementById('in-crack').value),
+        salt: parseInt(document.getElementById('in-salt').value),
+        loss: parseInt(document.getElementById('in-loss').value)
+    };
+
+    const weights = {
+        h: parseFloat(document.getElementById('w-h').value),
+        s: parseFloat(document.getElementById('w-s').value),
+        f: parseFloat(document.getElementById('w-f').value)
+    };
+
+    // Actualizar visualización inmediata
+    document.getElementById('val-hr').innerText = data.hr + "%";
+
+    // 2. Normalización de Subíndices (S_i) en rango [0, 1]
+    
+    // Subíndice Humedad (H): Influenciado por HR, Lluvia y porosidad teórica
+    const Sh = (data.hr / 100 * 0.6) + (Math.min(data.rain / 2000, 1) * 0.4);
+    
+    // Subíndice Sales (S): Influenciado por ambiente marino y eflorescencias visuales
+    const Ss = (data.salt / 5 * 0.7) + (data.sea ? 0.3 : 0);
+    
+    // Subíndice Físico (F): Influenciado por fisuras, erosión y heladicidad
+    const Sf = (data.crack / 5 * 0.5) + (data.loss / 40 * 0.3) + (data.freeze ? 0.2 : 0);
+
+    // 3. Cálculo de Índice de Deterioro Global (ID)
+    const totalWeight = weights.h + weights.s + weights.f;
+    const ID = ((Sh * weights.h) + (Ss * weights.s) + (Sf * weights.f)) / totalWeight;
+
+    renderResults(ID, Sh, Ss, Sf, data);
+}
+
+function renderResults(ID, Sh, Ss, Sf, data) {
+    const idDisplay = document.getElementById('id-number');
+    const labelDisplay = document.getElementById('id-label');
+    
+    idDisplay.innerText = ID.toFixed(2);
+
+    // Clasificación de estado
+    let color, text;
+    if (ID < 0.25) { color = "#10B981"; text = "ESTADO ÓPTIMO"; }
+    else if (ID < 0.50) { color = "#F59E0B"; text = "RIESGO LEVE"; }
+    else if (ID < 0.75) { color = "#EA580C"; text = "DETERIORO GRAVE"; }
+    else { color = "#EF4444"; text = "RIESGO CRÍTICO"; }
+
+    labelDisplay.innerText = text;
+    labelDisplay.style.backgroundColor = color;
+    idDisplay.style.color = color;
+
+    // 4. Diagnóstico Técnico Inteligente
+    const analysisBox = document.getElementById('tech-analysis');
+    let diag = `El sistema detecta un índice de <strong>${ID.toFixed(2)}</strong>. `;
+    
+    const dominant = Math.max(Sh, Ss, Sf);
+    if (dominant === Sh) diag += "La patología principal está vinculada a la absorción hídrica y capilaridad.";
+    else if (dominant === Ss) diag += "Se observa una degradación química severa por cristalización de sales.";
+    else diag += "El daño es predominantemente mecánico-estructural por pérdida de sección o fatiga del material.";
+
+    if (data.freeze && Sh > 0.6) diag += " <strong>Alerta:</strong> Riesgo inminente de gelifracción (hielo) por saturación de poros.";
+
+    analysisBox.innerHTML = diag;
+
+    // 5. Generación de Recomendaciones
+    const recoList = document.getElementById('reco-list');
+    recoList.innerHTML = "";
+    
+    const recos = [];
+    if (Sh > 0.4) recos.push("Ejecutar tratamiento de hidrofugación incolora transpirable.");
+    if (Ss > 0.5) recos.push("Limpieza mediante apósitos de pulpa de papel para extracción de sales.");
+    if (Sf > 0.3) recos.push("Consolidación superficial y cosido de fisuras con varillas de fibra.");
+    if (ID > 0.7) recos.push("Intervención urgente: Sustitución de piezas cerámicas desintegradas.");
+    
+    if (recos.length === 0) recos.push("Mantenimiento preventivo anual y limpieza de suciedad atmosférica.");
+
+    recos.forEach(r => {
+        const item = document.createElement('div');
+        item.className = 'reco-item';
+        item.innerText = r;
+        recoList.appendChild(item);
+    });
+}
